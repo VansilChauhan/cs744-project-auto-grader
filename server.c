@@ -31,6 +31,7 @@ TaskNode *create_task_node(int *socket)
     TaskNode *new_node = (TaskNode *)malloc(sizeof(TaskNode));
     new_node->socket = socket;
     new_node->next = NULL;
+    return new_node;
 }
 
 void enqueue_task(int *arg)
@@ -71,6 +72,11 @@ int *dequeue_task()
     return socket;
 }
 
+void write_file(int sockfd)
+{
+    printf("Started writing file\n");
+}
+
 void *thread_work()
 {
     while (1)
@@ -82,16 +88,32 @@ void *thread_work()
 
         int rwbytes;
         char buffer[BUFF_SIZE] = {0};
-        char *message = "world";
+        char *message = "success";
 
         bzero(buffer, BUFF_SIZE);
-        rwbytes = read(socket, buffer, BUFF_SIZE);
-        if (rwbytes < 0)
+
+        int n;
+        FILE *fp;
+        char *filename = "server_temp_file.c";
+        fp = fopen(filename, "w");
+        if (fp == NULL)
         {
-            perror("Read Error");
-            close(socket);
-            pthread_exit(NULL);
+            printf("Error in file creation\n");
+            exit(1);
         }
+        while (1)
+        {
+            printf("Waiting to receive.\n");
+            n = recv(socket, buffer, BUFF_SIZE, 0);
+            printf("recieved %d bytes.\n", n);
+            if (n <= 0)
+            {
+                break;
+            }
+            fprintf(fp, "%s", buffer);
+            bzero(buffer, BUFF_SIZE);
+        }
+
         rwbytes = write(socket, message, strlen(message));
         if (rwbytes < 0)
         {
@@ -160,7 +182,7 @@ int main(int argc, char *argv[])
         exit(1);
     }
 
-    if (listen(main_socket, 1) < 0)
+    if (listen(main_socket, 10) < 0)
     {
         perror("Listening Failed.");
         exit(1);

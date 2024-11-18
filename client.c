@@ -8,19 +8,38 @@
 
 #define BUF_SIZE 1024
 
+void send_file(FILE *fp, int sockfd)
+{
+    char data[BUF_SIZE] = {0};
+    while (fgets(data, BUF_SIZE, fp) != NULL)
+    {
+        printf("data= %s", data);
+        if (send(sockfd, data, strlen(data), 0) == -1)
+        {
+            printf("Error in sending.\n");
+            exit(1);
+        }
+        bzero(data, BUF_SIZE);
+    }
+    printf("out of send_file while loop.\n");
+    if (shutdown(sockfd, SHUT_WR) == -1)
+    {
+        perror("Error shutting down socket.");
+        return;
+    }
+}
+
 int main(int argc, char *argv[])
 {
     if (argc != 4)
     {
-        printf("Usage: %s <server_ip> <server_port> <seed>\n", argv[0]);
+        printf("Usage: %s <server_ip> <server_port> <file_name>\n", argv[0]);
         return -1;
     }
 
     char *ip = argv[1];
     int port = atoi(argv[2]);
-    int seed = atoi(argv[3]);
-
-    srand(seed);
+    char *file_name = argv[3];
 
     int sock, ret;
     struct sockaddr_in serv_addr;
@@ -47,16 +66,23 @@ int main(int argc, char *argv[])
         printf("Connection Failed\n");
         return -1;
     }
-
-    sleep(rand() % 10);
-
-    ret = send(sock, message, strlen(message), 0);
-    if (ret == -1)
+    // TODO: Implement file transfer here.
+    FILE *fp = fopen(file_name, "r");
+    if (fp == NULL)
     {
-        printf("Failed to send message\n");
-        return -1;
+        printf("Error in file reading");
+        exit(1);
     }
-    printf("Sent: %s\n", message);
+
+    send_file(fp, sock);
+    printf("stopped sending file.");
+    // ret = send(sock, message, strlen(message), 0);
+    // if (ret == -1)
+    // {
+    //     printf("Failed to send message\n");
+    //     return -1;
+    // }
+    // printf("Sent: %s\n", message);
 
     ret = recv(sock, buffer, BUF_SIZE, 0);
     if (ret == -1)
@@ -64,8 +90,9 @@ int main(int argc, char *argv[])
         printf("Failed to receive message\n");
         return -1;
     }
-    printf("Received: %s\n", buffer);
+    printf("Received Marks: %s\n", buffer);
 
+    fclose(fp);
     close(sock);
 
     return 0;
