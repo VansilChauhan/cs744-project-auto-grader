@@ -9,6 +9,7 @@
 #define BUFF_SIZE 1024
 
 pthread_mutex_t queue_lock;
+pthread_mutex_t count_lock;
 pthread_cond_t task_available;
 
 typedef struct TaskNode
@@ -25,6 +26,7 @@ typedef struct
 } TaskQueue;
 
 TaskQueue queue;
+int count = 0;
 
 TaskNode *create_task_node(int *socket)
 {
@@ -77,6 +79,21 @@ void write_file(int sockfd)
     printf("Started writing file\n");
 }
 
+int get_count()
+{
+    pthread_mutex_lock(&count_lock);
+    count++;
+    pthread_mutex_unlock(&count_lock);
+    return count;
+}
+
+int dec_count()
+{
+    pthread_mutex_lock(&count_lock);
+    count--;
+    pthread_mutex_unlock(&count_lock);
+}
+
 void *thread_work()
 {
     while (1)
@@ -94,8 +111,13 @@ void *thread_work()
 
         int n;
         FILE *fp;
-        char *filename = "server_temp_file.c";
-        fp = fopen(filename, "w");
+        char cfile[50];
+        char output_file[50];
+        int client_count = get_count();
+        sprintf(cfile, "server_temp_file_%d.c", client_count);
+        sprintf(output_file, "server_temp_file_%d.o", client_count);
+
+        fp = fopen(cfile, "w");
         if (fp == NULL)
         {
             printf("Error in file creation\n");
@@ -103,9 +125,7 @@ void *thread_work()
         }
         while (1)
         {
-            printf("Waiting to receive.\n");
             n = recv(socket, buffer, BUFF_SIZE, 0);
-            printf("recieved %d bytes.\n", n);
             if (n <= 0)
             {
                 break;
@@ -113,6 +133,10 @@ void *thread_work()
             fprintf(fp, "%s", buffer);
             bzero(buffer, BUFF_SIZE);
         }
+        fclose(fp);
+        char command[128];
+        sprintf(command, "gcc %s -o %s", cfile, output_file);
+        system(command);
 
         rwbytes = write(socket, message, strlen(message));
         if (rwbytes < 0)
@@ -121,6 +145,9 @@ void *thread_work()
             close(socket);
             pthread_exit(NULL);
         }
+        remove(cfile);
+        remove(output_file);
+        dec_count();
         close(socket);
     }
 }
@@ -158,6 +185,7 @@ int main(int argc, char *argv[])
     int thread_count = atoi(argv[2]);
 
     pthread_mutex_init(&queue_lock, NULL);
+    pthread_mutex_init(&count_lock, NULL);
     pthread_cond_init(&task_available, NULL);
 
     int main_socket, new_socket;
@@ -205,6 +233,7 @@ int main(int argc, char *argv[])
     }
     close(main_socket);
     pthread_mutex_destroy(&queue_lock);
+    pthread_mutex_destroy(&count_lock);
     pthread_cond_destroy(&task_available);
     return 0;
 }
