@@ -1,0 +1,2 @@
+1. File transfer issue when blocking call infinitly waiting for next buffer data even when client stopped sending file.
+2. 

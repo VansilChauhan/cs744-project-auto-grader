@@ -5,8 +5,12 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include <sys/wait.h>
 #include <pthread.h>
 #define BUFF_SIZE 1024
+
+#define MAX_TEST_CASES 10
+#define MAX_OUTPUT_LENGTH 100
 
 pthread_mutex_t queue_lock;
 pthread_mutex_t count_lock;
@@ -94,6 +98,49 @@ int dec_count()
     pthread_mutex_unlock(&count_lock);
 }
 
+void compile(char *filename, char *executable)
+{
+    char *compiler = "/usr/bin/gcc";
+    char *output_file = "-o";
+    int pid = fork();
+    int status;
+    if (pid < 0)
+    {
+        perror("Fork Failed");
+        exit(1);
+    }
+    else if (pid == 0)
+    {
+        printf("Compiling the program...");
+        execlp(compiler, compiler, filename, output_file, executable, (char *)NULL);
+        perror("Error executing gcc");
+        exit(1);
+    }
+    else
+    {
+        waitpid(pid, &status, 0);
+        if (WIFEXITED(status))
+        {
+            if (WEXITSTATUS(status) == 0)
+            {
+                printf("compilation succesfull! Executable: %s\n", executable);
+            }
+            else
+            {
+                printf("compilation failed with exit code: %d\n", WEXITSTATUS(status));
+            }
+        }
+        else
+        {
+            printf("Compilation process did not terminate normally.\n");
+        }
+    }
+}
+
+char *run(char *executable, char *input)
+{
+}
+
 void *thread_work()
 {
     while (1)
@@ -111,11 +158,12 @@ void *thread_work()
 
         int n;
         FILE *fp;
-        char cfile[50];
-        char output_file[50];
-        int client_count = get_count();
-        sprintf(cfile, "server_temp_file_%d.c", client_count);
-        sprintf(output_file, "server_temp_file_%d.o", client_count);
+        char *cfile = "student_temp.c";
+        // char cfile[50];
+        // int client_count = get_count();
+        // sprintf(cfile, "student_temp_%d.c", client_count);
+
+        char *executable = "student_program";
 
         fp = fopen(cfile, "w");
         if (fp == NULL)
@@ -135,8 +183,8 @@ void *thread_work()
         }
         fclose(fp);
         char command[128];
-        sprintf(command, "gcc %s -o %s", cfile, output_file);
-        system(command);
+
+        compile(cfile, executable);
 
         rwbytes = write(socket, message, strlen(message));
         if (rwbytes < 0)
@@ -146,7 +194,8 @@ void *thread_work()
             pthread_exit(NULL);
         }
         remove(cfile);
-        remove(output_file);
+        remove(executable);
+        // remove(output_file);
         dec_count();
         close(socket);
     }
@@ -175,14 +224,35 @@ void reset_queue()
 
 int main(int argc, char *argv[])
 {
-    if (argc < 3)
+    if (argc < 5)
     {
-        printf("usage: ./filename <port> <thread_count>\n");
+        printf("usage: ./filename <port> <thread_count> <solution.c> <test_cases.txt>\n");
         exit(1);
     }
 
     int port = atoi(argv[1]);
     int thread_count = atoi(argv[2]);
+    char *solution_file = argv[3];
+    char *test_cases_file = argv[4];
+    char *executable = "solution";
+    compile(solution_file, executable);
+
+    FILE *input_test_cases_file = fopen(test_cases_file, "r");
+    if (input_test_cases_file == NULL)
+    {
+        printf("Error in testcase file reading");
+        exit(1);
+    }
+
+    int test_case_count = 0;
+    char test_case_inputs[MAX_TEST_CASES][MAX_OUTPUT_LENGTH];
+    char current_line[MAX_OUTPUT_LENGTH];
+    while (test_case_count < MAX_TEST_CASES && fgets(current_line, MAX_OUTPUT_LENGTH, input_test_cases_file))
+    {
+        current_line[strcspn(current_line, "\n")] = '\0';
+        printf("%s\n", current_line);
+        test_case_count++;
+    }
 
     pthread_mutex_init(&queue_lock, NULL);
     pthread_mutex_init(&count_lock, NULL);
