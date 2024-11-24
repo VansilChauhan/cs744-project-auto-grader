@@ -1,8 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include <time.h>
-
 int main(int argc, char *argv[])
 {
     if (argc < 2)
@@ -11,13 +9,7 @@ int main(int argc, char *argv[])
         exit(1);
     }
     int num = atoi(argv[1]);
-    if (num % 1 == 0)
-    {
-        printf("%d", num * num);
-    }
-    else
-    {
-        printf("%d", num);
-    }
+
+    printf("%d", num * num);
     return 0;
 }
