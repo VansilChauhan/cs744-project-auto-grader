@@ -13,4 +13,4 @@ if [[ -z "$SERVER_IP" || -z "$SERVER_PORT" || -z "$PROGRAM_FILE" ]]; then
 fi
 
 # Run client.o with parallel execution using xargs
-for i in {1..100}; do echo $i; done | xargs -n 1 -P 10 bash -c "${CLIENT} $SERVER_IP $SERVER_PORT $PROGRAM_FILE"
+for i in {1..40}; do echo $i; done | xargs -n 1 -P 10 bash -c "${CLIENT} $SERVER_IP $SERVER_PORT $PROGRAM_FILE"

@@ -14,11 +14,22 @@
 #define MAX_OUTPUT_LENGTH 100
 
 pthread_mutex_t queue_lock;
+pthread_mutex_t client_count_lock;
 pthread_cond_t task_available;
 
 char test_case_solution_inputs[MAX_TEST_CASES][MAX_OUTPUT_LENGTH];
-char *test_case_solution_outputs[MAX_TEST_CASES];
+char test_case_solution_outputs[MAX_TEST_CASES][MAX_OUTPUT_LENGTH];
 int test_case_count = 0;
+int client_count = 0;
+
+int get_client_count()
+{
+    pthread_mutex_lock(&client_count_lock);
+    int temp = client_count;
+    client_count++;
+    pthread_mutex_unlock(&client_count_lock);
+    return temp;
+}
 
 int compare_test_case_output(char *compare_str, int index)
 {
@@ -98,6 +109,7 @@ void compile(char *filename, char *executable)
 {
     char *compiler = "/usr/bin/gcc";
     char *output_file = "-o";
+    // char *output_folder;
     int pid = fork();
     int status;
     if (pid < 0)
@@ -135,11 +147,10 @@ void compile(char *filename, char *executable)
 
 char *run(char *executable, char *input)
 {
-    char *output;
+    char *output = (char *)malloc(MAX_OUTPUT_LENGTH * sizeof(char));
     int pipe_fd[2];
     pid_t pid;
-    char program[strlen(executable) + 2];
-    char *result = (char *)malloc(BUFF_SIZE);
+    char program[100];
 
     sprintf(program, "./%s", executable);
     if (pipe(pipe_fd) == -1)
@@ -172,19 +183,18 @@ char *run(char *executable, char *input)
         int status;
         waitpid(pid, &status, 0);
         ssize_t nbytes;
-        nbytes = read(pipe_fd[0], result, BUFF_SIZE - 1);
+        nbytes = read(pipe_fd[0], output, MAX_OUTPUT_LENGTH - 1);
         if (nbytes > 0)
         {
-            result[nbytes] = '\0';
+            output[nbytes] = '\0';
         }
         else
         {
-            strcpy(result, "");
+            strcpy(output, "");
         }
-
         close(pipe_fd[0]);
     }
-    return result;
+    return output;
 }
 
 void *thread_work()
@@ -192,7 +202,6 @@ void *thread_work()
     while (1)
     {
         int *new_socket = dequeue_task();
-
         int socket = *((int *)new_socket);
         free(new_socket);
 
@@ -203,10 +212,16 @@ void *thread_work()
         bzero(buffer, BUFF_SIZE);
 
         int n;
+        int client_number = get_client_count();
         FILE *fp;
-        char *cfile = "student_temp.c";
+        // char *cfile = "student_temp.c";
+        time_t t = time(NULL);
+        char cfile[100];
+        snprintf(cfile, sizeof(cfile), "student_program_%ld_%d.c", t, client_number);
 
-        char *executable = "student_program";
+        t = time(NULL);
+        char executable[100];
+        snprintf(executable, sizeof(executable), "student_program_%ld_%d.o", t, client_number);
 
         fp = fopen(cfile, "w");
         if (fp == NULL)
@@ -228,14 +243,18 @@ void *thread_work()
         char command[128];
 
         compile(cfile, executable);
+        printf("testcase count is %d\n", test_case_count);
         int success_count = 0;
+        char *client_results[MAX_TEST_CASES];
         for (int i = 0; i < test_case_count; i++)
         {
-            char *run_output = run(executable, test_case_solution_inputs[i]);
-            if (compare_test_case_output(run_output, i))
+            client_results[i] = run(executable, test_case_solution_inputs[i]);
+            printf("comparing %s with %s for client %s\n", test_case_solution_outputs[i], client_results[i], executable);
+            if (compare_test_case_output(client_results[i], i))
             {
                 success_count++;
             }
+            // free(run_output);
         }
         sprintf(result, "Marks: %.2f %%, Test cases passed: (%d/%d)", (success_count / (float)test_case_count) * 100, success_count, test_case_count);
         rwbytes = write(socket, result, strlen(result));
@@ -284,7 +303,7 @@ int main(int argc, char *argv[])
     int thread_count = atoi(argv[2]);
     char *solution_file = argv[3];
     char *test_cases_file = argv[4];
-    char *executable = "solution";
+    char *executable = "solution.o";
     compile(solution_file, executable);
 
     FILE *input_test_cases_file = fopen(test_cases_file, "r");
@@ -293,12 +312,12 @@ int main(int argc, char *argv[])
         printf("Error in testcase file reading");
         exit(1);
     }
-
     while (test_case_count < MAX_TEST_CASES && fgets(test_case_solution_inputs[test_case_count], MAX_OUTPUT_LENGTH, input_test_cases_file))
     {
         test_case_solution_inputs[test_case_count][strcspn(test_case_solution_inputs[test_case_count], "\n")] = '\0';
         char *temp_result = run(executable, test_case_solution_inputs[test_case_count]);
-        test_case_solution_outputs[test_case_count] = temp_result;
+        strcpy(test_case_solution_outputs[test_case_count], temp_result);
+        free(temp_result);
         test_case_count++;
     }
 
@@ -308,6 +327,7 @@ int main(int argc, char *argv[])
     }
 
     pthread_mutex_init(&queue_lock, NULL);
+    pthread_mutex_init(&client_count_lock, NULL);
     pthread_cond_init(&task_available, NULL);
 
     int main_socket, new_socket;
@@ -355,6 +375,7 @@ int main(int argc, char *argv[])
     }
     close(main_socket);
     pthread_mutex_destroy(&queue_lock);
+    pthread_mutex_destroy(&client_count_lock);
     pthread_cond_destroy(&task_available);
     return 0;
 }
