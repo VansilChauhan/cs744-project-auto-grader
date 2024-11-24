@@ -10,6 +10,11 @@
 #include <fcntl.h>
 #define BUFF_SIZE 1024
 
+#define RESET "\033[0m"   // Reset to default color
+#define GREEN "\033[32m"  // Green text
+#define RED "\033[31m"    // Red text
+#define YELLOW "\033[33m" // Yellow text
+
 #define MAX_TEST_CASES 10
 #define MAX_OUTPUT_LENGTH 100
 
@@ -230,7 +235,9 @@ void *thread_work()
                 success_count++;
             }
         }
-        sprintf(result, "Marks: %.2f %%, Test cases passed: (%d/%d)", (success_count / (float)test_case_count) * 100, success_count, test_case_count);
+        sprintf(result, YELLOW " %.2f %%"
+                               ", " RED "(" GREEN "%d" RED "/%d)" RESET " test cases passed!",
+                (success_count / (float)test_case_count) * 100, success_count, test_case_count);
         rwbytes = write(socket, result, strlen(result));
         if (rwbytes < 0)
         {

@@ -1,2 +1,9 @@
 1. File transfer issue when blocking call infinitly waiting for next buffer data even when client stopped sending file.
 2. 
+
+
+
+
+Ref
+
+1. https://www.quora.com/How-do-I-print-a-colored-output-in-C#:~:text=Colors%20for%20text%20are%20represented,red%20text%20%5Ce%5B0m%22
