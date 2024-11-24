@@ -1,8 +1,21 @@
 #include <stdio.h>
+#include <stdlib.h>
 
-int main()
+int main(int argc, char *argv[])
 {
-    printf("Hello World.");
-    printf("Timepass");
+    if (argc < 2)
+    {
+        printf("invalid arg");
+        exit(1);
+    }
+    int num = atoi(argv[1]);
+    if (num % 2 == 0)
+    {
+        printf("%d", num * num);
+    }
+    else
+    {
+        printf("%d", num);
+    }
     return 0;
 }
