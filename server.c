@@ -100,10 +100,10 @@ int *dequeue_task()
     return socket;
 }
 
-void write_file(int sockfd)
-{
-    printf("Started writing file\n");
-}
+// void write_file(int sockfd)
+// {
+//     printf("Started writing file\n");
+// }
 
 void compile(char *filename, char *executable)
 {
@@ -119,7 +119,7 @@ void compile(char *filename, char *executable)
     }
     else if (pid == 0)
     {
-        printf("Compiling the program...");
+        // printf("Compiling the program...");
         execlp(compiler, compiler, filename, output_file, executable, (char *)NULL);
         perror("Error executing gcc");
         exit(1);
@@ -127,21 +127,21 @@ void compile(char *filename, char *executable)
     else
     {
         waitpid(pid, &status, 0);
-        if (WIFEXITED(status))
-        {
-            if (WEXITSTATUS(status) == 0)
-            {
-                printf("compilation succesfull! Executable: %s\n", executable);
-            }
-            else
-            {
-                printf("compilation failed with exit code: %d\n", WEXITSTATUS(status));
-            }
-        }
-        else
-        {
-            printf("Compilation process did not terminate normally.\n");
-        }
+        // if (WIFEXITED(status))
+        // {
+        //     if (WEXITSTATUS(status) == 0)
+        //     {
+        //         printf("compilation succesfull! Executable: %s\n", executable);
+        //     }
+        //     else
+        //     {
+        //         printf("compilation failed with exit code: %d\n", WEXITSTATUS(status));
+        //     }
+        // }
+        // else
+        // {
+        //     printf("Compilation process did not terminate normally.\n");
+        // }
     }
 }
 
@@ -243,13 +243,13 @@ void *thread_work()
         char command[128];
 
         compile(cfile, executable);
-        printf("testcase count is %d\n", test_case_count);
+        // printf("testcase count is %d\n", test_case_count);
         int success_count = 0;
         char *client_results[MAX_TEST_CASES];
         for (int i = 0; i < test_case_count; i++)
         {
             client_results[i] = run(executable, test_case_solution_inputs[i]);
-            printf("comparing %s with %s for client %s\n", test_case_solution_outputs[i], client_results[i], executable);
+            // printf("comparing %s with %s for client %s\n", test_case_solution_outputs[i], client_results[i], executable);
             if (compare_test_case_output(client_results[i], i))
             {
                 success_count++;
@@ -321,10 +321,10 @@ int main(int argc, char *argv[])
         test_case_count++;
     }
 
-    for (int i = 0; i < test_case_count; i++)
-    {
-        printf("input: %s ,output: %s\n", test_case_solution_inputs[i], test_case_solution_outputs[i]);
-    }
+    // for (int i = 0; i < test_case_count; i++)
+    // {
+    //     printf("input: %s ,output: %s\n", test_case_solution_inputs[i], test_case_solution_outputs[i]);
+    // }
 
     pthread_mutex_init(&queue_lock, NULL);
     pthread_mutex_init(&client_count_lock, NULL);
