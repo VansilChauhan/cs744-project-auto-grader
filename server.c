@@ -15,7 +15,7 @@
 #define RED "\033[31m"    // Red text
 #define YELLOW "\033[33m" // Yellow text
 
-#define MAX_TEST_CASES 10
+#define MAX_TEST_CASES 100
 #define MAX_OUTPUT_LENGTH 100
 
 pthread_mutex_t queue_lock;
@@ -339,6 +339,8 @@ int main(int argc, char *argv[])
     {
         pthread_create(&threads[i], NULL, &thread_work, NULL);
     }
+
+    printf("server is ready to accept connections... on port %d\n", port);
 
     while (1)
     {

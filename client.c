@@ -65,7 +65,6 @@ int main(int argc, char *argv[])
         return -1;
     }
 
-    // TODO: Implement file transfer here.
     FILE *fp = fopen(file_name, "r");
     if (fp == NULL)
     {
@@ -74,13 +73,6 @@ int main(int argc, char *argv[])
     }
 
     send_file(fp, sock);
-    // ret = send(sock, message, strlen(message), 0);
-    // if (ret == -1)
-    // {
-    //     printf("Failed to send message\n");
-    //     return -1;
-    // }
-    // printf("Sent: %s\n", message);
 
     ret = recv(sock, buffer, BUF_SIZE, 0);
     if (ret == -1)
@@ -88,6 +80,7 @@ int main(int argc, char *argv[])
         printf("Failed to receive message\n");
         return -1;
     }
+
     printf("Results: %s\n", buffer);
 
     fclose(fp);
