@@ -14,7 +14,6 @@
 #define MAX_OUTPUT_LENGTH 100
 
 pthread_mutex_t queue_lock;
-pthread_mutex_t count_lock;
 pthread_cond_t task_available;
 
 char test_case_solution_inputs[MAX_TEST_CASES][MAX_OUTPUT_LENGTH];
@@ -23,7 +22,6 @@ int test_case_count = 0;
 
 int compare_test_case_output(char *compare_str, int index)
 {
-    // printf("is %s == %s ?", compare_str, test_case_solution_outputs[index]);
     if (strcmp(test_case_solution_outputs[index], compare_str) == 0)
     {
         return 1;
@@ -44,7 +42,6 @@ typedef struct
 } TaskQueue;
 
 TaskQueue queue;
-int count = 0;
 
 TaskNode *create_task_node(int *socket)
 {
@@ -95,21 +92,6 @@ int *dequeue_task()
 void write_file(int sockfd)
 {
     printf("Started writing file\n");
-}
-
-int get_count()
-{
-    pthread_mutex_lock(&count_lock);
-    count++;
-    pthread_mutex_unlock(&count_lock);
-    return count;
-}
-
-int dec_count()
-{
-    pthread_mutex_lock(&count_lock);
-    count--;
-    pthread_mutex_unlock(&count_lock);
 }
 
 void compile(char *filename, char *executable)
@@ -189,12 +171,6 @@ char *run(char *executable, char *input)
         close(pipe_fd[1]);
         int status;
         waitpid(pid, &status, 0);
-
-        // printf("Output from child process: \n");
-        // while((nbytes = read(pipe_fd[0],buffer, BUFF_SIZE-1))>0){
-        //     buffer[nbytes] = '\0';
-        //     printf("%s", buffer);
-        // }
         ssize_t nbytes;
         nbytes = read(pipe_fd[0], result, BUFF_SIZE - 1);
         if (nbytes > 0)
@@ -229,9 +205,6 @@ void *thread_work()
         int n;
         FILE *fp;
         char *cfile = "student_temp.c";
-        // char cfile[50];
-        // int client_count = get_count();
-        // sprintf(cfile, "student_temp_%d.c", client_count);
 
         char *executable = "student_program";
 
@@ -258,14 +231,11 @@ void *thread_work()
         int success_count = 0;
         for (int i = 0; i < test_case_count; i++)
         {
-            // printf("running for input: %s", test_case_solution_inputs[i]);
             char *run_output = run(executable, test_case_solution_inputs[i]);
             if (compare_test_case_output(run_output, i))
             {
                 success_count++;
             }
-            // printf("run output = %s\n", run_output);
-            // printf("compared: %d\n", compare_test_case_output(run_output, i));
         }
         sprintf(result, "Marks: %.2f %%, Test cases passed: (%d/%d)", (success_count / (float)test_case_count) * 100, success_count, test_case_count);
         rwbytes = write(socket, result, strlen(result));
@@ -277,7 +247,6 @@ void *thread_work()
         }
         remove(cfile);
         remove(executable);
-        dec_count();
         close(socket);
     }
 }
@@ -325,13 +294,10 @@ int main(int argc, char *argv[])
         exit(1);
     }
 
-    // char current_line[MAX_OUTPUT_LENGTH];
     while (test_case_count < MAX_TEST_CASES && fgets(test_case_solution_inputs[test_case_count], MAX_OUTPUT_LENGTH, input_test_cases_file))
     {
-        // current_line[strcspn(current_line, "\n")] = '\0';
         test_case_solution_inputs[test_case_count][strcspn(test_case_solution_inputs[test_case_count], "\n")] = '\0';
         char *temp_result = run(executable, test_case_solution_inputs[test_case_count]);
-        // printf("output for: %s is %s\n", test_case_solution_inputs[test_case_count], temp_result);
         test_case_solution_outputs[test_case_count] = temp_result;
         test_case_count++;
     }
@@ -342,7 +308,6 @@ int main(int argc, char *argv[])
     }
 
     pthread_mutex_init(&queue_lock, NULL);
-    pthread_mutex_init(&count_lock, NULL);
     pthread_cond_init(&task_available, NULL);
 
     int main_socket, new_socket;
@@ -390,7 +355,6 @@ int main(int argc, char *argv[])
     }
     close(main_socket);
     pthread_mutex_destroy(&queue_lock);
-    pthread_mutex_destroy(&count_lock);
     pthread_cond_destroy(&task_available);
     return 0;
 }

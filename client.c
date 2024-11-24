@@ -13,7 +13,6 @@ void send_file(FILE *fp, int sockfd)
     char data[BUF_SIZE] = {0};
     while (fgets(data, BUF_SIZE, fp) != NULL)
     {
-        printf("data= %s", data);
         if (send(sockfd, data, strlen(data), 0) == -1)
         {
             printf("Error in sending.\n");
@@ -21,7 +20,6 @@ void send_file(FILE *fp, int sockfd)
         }
         bzero(data, BUF_SIZE);
     }
-    printf("out of send_file while loop.\n");
     if (shutdown(sockfd, SHUT_WR) == -1)
     {
         perror("Error shutting down socket.");
@@ -66,6 +64,7 @@ int main(int argc, char *argv[])
         printf("Connection Failed\n");
         return -1;
     }
+
     // TODO: Implement file transfer here.
     FILE *fp = fopen(file_name, "r");
     if (fp == NULL)
@@ -75,7 +74,6 @@ int main(int argc, char *argv[])
     }
 
     send_file(fp, sock);
-    printf("stopped sending file.");
     // ret = send(sock, message, strlen(message), 0);
     // if (ret == -1)
     // {
@@ -90,7 +88,7 @@ int main(int argc, char *argv[])
         printf("Failed to receive message\n");
         return -1;
     }
-    printf("Received Marks: %s\n", buffer);
+    printf("Results: %s\n", buffer);
 
     fclose(fp);
     close(sock);
